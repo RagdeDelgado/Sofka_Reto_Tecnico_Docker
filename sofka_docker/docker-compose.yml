@@ -1,0 +1,47 @@
+#version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: crud-mysql
+    environment:
+      - MYSQL_DATABASE=api
+      - MYSQL_ROOT_PASSWORD=12345678
+    ports:
+      - "3307:3306"  # Conéctate desde MySQL Workbench a localhost:3307
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - crud-net
+
+  crud:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crud
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/api?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=12345678
+      - SERVER_PORT=4000
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    networks:
+      - crud-net
+
+networks:
+  crud-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
